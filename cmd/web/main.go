@@ -17,6 +17,6 @@ func main() {
 	r.HandleFunc("/signout", handlers.LogoutHandler)
 
 	fmt.Println("Server is listening on :8080")
-	http.Handle("/", r)
-	http.ListenAndServe(":8080", nil)
+	//http.Handle("/", r)
+	http.ListenAndServe(":8080", r)
 }
