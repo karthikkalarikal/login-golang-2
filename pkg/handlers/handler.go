@@ -15,6 +15,7 @@ var (
 
 // login page handler
 func LoginPage(w http.ResponseWriter, r *http.Request) {
+	SetNoCacheHeaders(w)
 	tmpl, err := template.ParseFiles("templates/login.page.html")
 	if err != nil {
 		http.Error(w, "Internal server Error", http.StatusInternalServerError)
@@ -26,19 +27,30 @@ func LoginPage(w http.ResponseWriter, r *http.Request) {
 
 // login handler
 func LoginHandler(w http.ResponseWriter, r *http.Request) {
+	SetNoCacheHeaders(w)
 	r.ParseForm()
+	// go func() {
+	// 	ctx := r.Context()
+	// 	<-ctx.Done()
+	// 	log
+	// }()
+	// time.Sleep(10 * time.Second)
+	//
+	// w.Header().Add()
 	username := r.FormValue("username")
 	password := r.FormValue("password")
 	session, _ := store.Get(r, "session")
 	// log.Println(username, password)
+	// session.Options = &sessions.Options{MaxAge: -1}
+
 	if username == validUsername && password == validPassword {
 
 		session.Values["authenticated"] = true
 		session.Save(r, w)
 		http.Redirect(w, r, "/home", http.StatusSeeOther)
-	} else if username == validUsername && password != validPassword {
 
-		session.Values["authenticated"] = false
+	} else {
+
 		session.Save(r, w)
 
 		tmpl, err := template.ParseFiles("templates/login.page.html")
@@ -46,21 +58,24 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
 			return
 		}
-		tmpl.Execute(w, "Mr "+username+" name and password is incorrect")
-	} else {
-		session, _ = store.Get(r, "session")
-
-		tmpl, err := template.ParseFiles("templates/login.page.html")
-		if err != nil {
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
-			return
+		var errorMessage string
+		if username == validUsername {
+			errorMessage = "The password is incorrect"
+		} else {
+			errorMessage = "The username and password are incorrect"
 		}
-		tmpl.Execute(w, "Mr/Miss "+username+" the user name and password is incorrect")
+
+		tmpl.Execute(w, "Mr "+username+" "+errorMessage)
+
 	}
 }
 
 // home page handler
 func HomePage(w http.ResponseWriter, r *http.Request) {
+
+	SetNoCacheHeaders(w)
+	// ... rest of the code
+
 	session, _ := store.Get(r, "session")
 	auth, ok := session.Values["authenticated"].(bool)
 	if !ok || !auth {
@@ -75,10 +90,22 @@ func HomePage(w http.ResponseWriter, r *http.Request) {
 	tmpl.Execute(w, nil)
 }
 
+// disable caching
+func SetNoCacheHeaders(w http.ResponseWriter) {
+	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+	w.Header().Set("Pragma", "no-cache")
+	w.Header().Set("Expires", "0")
+}
+
 // logout handler
 func LogoutHandler(w http.ResponseWriter, r *http.Request) {
+
+	SetNoCacheHeaders(w)
 	session, _ := store.Get(r, "session")
 	session.Values["authenticated"] = false
 	session.Save(r, w)
-	http.Redirect(w, r, "/", http.StatusSeeOther)
+
+	w.Header().Set("Location", "/")
+	w.WriteHeader(http.StatusMovedPermanently)
+
 }
